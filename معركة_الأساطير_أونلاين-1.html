@@ -1,0 +1,333 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>معركة الأساطير</title>
+<style>
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#101827;color:#fff;font-family:Tahoma,Arial,sans-serif}
+#game{display:block;width:100%;height:100%;touch-action:none}
+#hud{position:fixed;inset:12px 12px auto 12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none}
+.panel{background:#101827d9;border:1px solid #ffffff25;border-radius:14px;padding:9px 13px;box-shadow:0 5px 20px #0005}
+#title{font-weight:900;font-size:18px;color:#ffe27a}#stats{font-size:13px;line-height:1.8}
+#help{position:fixed;bottom:12px;left:12px;max-width:330px;font-size:12px;line-height:1.7;color:#e5edf8}
+#bossMessage{display:none;position:fixed;top:45%;left:50%;transform:translate(-50%,-50%);background:#5b1010ee;border:2px solid #ffcf57;border-radius:16px;padding:16px 24px;font-size:clamp(20px,4vw,34px);font-weight:900;text-align:center;z-index:5;pointer-events:none}#message{position:fixed;top:78px;left:50%;transform:translateX(-50%);background:#101827df;border:1px solid #ffffff30;border-radius:12px;padding:9px 14px;font-size:13px;text-align:center;pointer-events:none}
+#start{position:fixed;inset:0;background:#08111ddd;display:grid;place-items:center;padding:20px}
+.card{max-width:430px;text-align:center;background:#17243a;border:1px solid #ffffff2b;border-radius:22px;padding:26px;box-shadow:0 20px 70px #0008}
+.card h1{margin:0 0 8px;color:#ffe27a}.card p{line-height:1.8;color:#d6e0ef}
+.lobby{width:min(94vw,520px);max-height:92vh;overflow:auto;text-align:center;background:linear-gradient(145deg,#1b2d49,#101a2c);border:1px solid #ffffff35;border-radius:24px;padding:22px;box-shadow:0 20px 70px #0009}.lobby h1{margin:0;color:#ffe27a;font-size:clamp(25px,5vw,36px)}.lobby-sub{margin:7px 0 18px;color:#cbd8eb}.lobby input{width:100%;padding:13px;border-radius:11px;border:1px solid #ffffff45;background:#0b1526;color:white;font-size:16px;margin:7px 0 12px;text-align:center}.lobby-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px}.lobby button{width:100%;margin-top:8px}.lobby .main-btn{background:#ffca55}.lobby .secondary{background:#294365;color:#fff;border:1px solid #ffffff30}.room-box{margin:14px 0;padding:12px;border-radius:14px;background:#0b1526;border:1px solid #ffffff25}.room-code{font-size:25px;letter-spacing:5px;color:#8ff5ff;font-weight:900;min-height:32px}.lobby-note{font-size:11px;color:#aabbd2;line-height:1.6;margin:12px 0 0}
+button{border:0;border-radius:12px;padding:13px 25px;font-weight:900;font-size:16px;background:#ffca55;color:#202331;cursor:pointer}
+#mobile{position:fixed;bottom:18px;right:14px;display:none;gap:10px;align-items:end}
+.pad{display:grid;grid-template-columns:repeat(3,42px);grid-template-rows:repeat(2,42px);gap:4px}
+.pad button,.action{padding:0;width:42px;height:42px;background:#182944dd;color:white;border:1px solid #ffffff55}
+.action{width:64px;height:64px;border-radius:50%;background:#d78a39}
+@media (pointer:coarse){#mobile{display:flex}#help{max-width:180px;font-size:10px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="hud">
+ <div class="panel"><div id="title">⚔️ معركة الأساطير</div><div id="stats">النقاط: <b id="score">0</b><br>الأهداف المتبقية: <b id="left">8</b><br>❤️ الصحة: <b id="health">100</b>%</div></div>
+ <div class="panel" id="level">ساحة التدريب · 1 لاعب</div>
+</div>
+<div id="message">اهزم الأهداف الكرتونية واجمع النقاط!</div>
+<div id="bossMessage">👑 ظهر الزعيم!</div>
+<div id="help" class="panel">أزرار الحركة · اسحب الشاشة يمين ويسار لتدوير الكاميرا · اسحب للأعلى والأسفل لتغيير زاوية النظر · إطلاق لإطلاق كرة الطاقة</div>
+<div id="mobile">
+ <div class="pad">
+  <span></span><button data-key="w">▲</button><span></span>
+  <button data-key="a">◀</button><button data-key="s">▼</button><button data-key="d">▶</button>
+ </div>
+ <button class="action" id="shoot">إطلاق</button>
+</div>
+<div id="start"><div class="lobby">
+ <h1>⚔️ معركة الأساطير</h1>
+ <p class="lobby-sub">اللوبي الرئيسي · جهّز لاعبك قبل دخول الساحة</p>
+ <label for="playerName">اسم اللاعب</label>
+ <input id="playerName" maxlength="16" value="لاعب الأساطير" placeholder="اكتب اسمك">
+ <div class="room-box">
+  <div>غرفة اللعب</div>
+  <div class="room-code" id="roomCode">------</div>
+  <div class="lobby-actions"><button class="secondary" id="createRoom">إنشاء غرفة</button><button class="secondary" id="copyRoom">نسخ الرمز</button></div>
+ </div>
+ <input id="joinCode" maxlength="6" placeholder="أدخل رمز غرفة صديقك">
+ <button class="secondary" id="joinRoom">دخول الغرفة</button>
+ <button class="main-btn" id="play">ابدأ المعركة</button>
+ <p class="lobby-note" id="lobbyStatus">اتصل بالسيرفر، أنشئ غرفة وشارك الرمز مع أصدقائك. يمكنكم اللعب معاً في نفس الساحة.</p>
+ </div></div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.min.js"></script>
+<script src="/socket.io/socket.io.js"></script>
+<script>
+(()=>{
+const canvas=document.getElementById('game');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x8dc8e8);scene.fog=new THREE.Fog(0x8dc8e8,35,90);
+const camera=new THREE.PerspectiveCamera(65,innerWidth/innerHeight,.1,150);
+scene.add(new THREE.HemisphereLight(0xe6f5ff,0x536044,2));
+const sun=new THREE.DirectionalLight(0xfff1cf,2.2);sun.position.set(-15,25,12);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);scene.add(sun);
+const mat=(color,roughness=.85)=>new THREE.MeshStandardMaterial({color,roughness});
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(110,110),mat(0x587b49));ground.rotation.x=-Math.PI/2;ground.receiveShadow=true;scene.add(ground);
+const grid=new THREE.GridHelper(100,50,0x9dbb77,0x78945e);grid.position.y=.015;scene.add(grid);
+const arena=new THREE.Group();scene.add(arena);
+function box(x,y,z,sx,sy,sz,color){let m=new THREE.Mesh(new THREE.BoxGeometry(sx,sy,sz),mat(color));m.position.set(x,y,z);m.castShadow=true;m.receiveShadow=true;arena.add(m);return m}
+for(let i=0;i<28;i++){let a=i/28*Math.PI*2,r=24;let x=Math.cos(a)*r,z=Math.sin(a)*r;box(x,1.3,z,2.5,2.6,2.5,i%2?0x7b8790:0x9b805d)}
+for(let i=0;i<18;i++){let x=(Math.random()-.5)*36,z=(Math.random()-.5)*36;if(Math.hypot(x,z)<7)continue;box(x,.65,z,1.6,1.3,1.6,[0x8b6749,0x6c8291,0x8a8b61][i%3])}
+const player=new THREE.Group();scene.add(player);
+const body=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.95,5,10),mat(0x2866c7));body.position.y=1.05;body.castShadow=true;player.add(body);
+const head=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),mat(0xf0c49a));head.position.y=1.88;head.castShadow=true;player.add(head);
+const visor=new THREE.Mesh(new THREE.BoxGeometry(.42,.13,.12),mat(0x172b48));visor.position.set(0,1.91,-.27);player.add(visor);
+const backpack=new THREE.Mesh(new THREE.BoxGeometry(.55,.65,.28),mat(0x263c50));backpack.position.set(0,1.15,.48);player.add(backpack);
+const targets=[];const targetMat=mat(0xe9a63f);
+function makeTarget(x,z){let g=new THREE.Group();let orb=new THREE.Mesh(new THREE.SphereGeometry(.68,18,14),targetMat);orb.position.y=1;orb.castShadow=true;g.add(orb);let eyeMat=mat(0x26313e);for(let s of [-1,1]){let e=new THREE.Mesh(new THREE.SphereGeometry(.09,8,8),eyeMat);e.position.set(s*.22,1.13,-.58);g.add(e)}g.position.set(x,0,z);scene.add(g);targets.push({g,alive:true,phase:Math.random()*6,attackCooldown:0})}
+for(let i=0;i<8;i++){let a=i/8*Math.PI*2;makeTarget(Math.cos(a)* (10+Math.random()*5),Math.sin(a)*(10+Math.random()*5))}
+let boss=null,bossHealth=0,bossMaxHealth=30,bossAttackCooldown=0,bossSpawned=false;
+function spawnBoss(){
+ if(bossSpawned)return;
+ bossSpawned=true;
+ bossHealth=bossMaxHealth;
+ boss=new THREE.Group();
+ const bossBody=new THREE.Mesh(new THREE.SphereGeometry(1.65,24,18),mat(0x9c2638));
+ bossBody.position.y=1.8;bossBody.castShadow=true;boss.add(bossBody);
+ const crown=new THREE.Mesh(new THREE.ConeGeometry(.75,.8,5),mat(0xffd34e));
+ crown.position.y=3.25;crown.castShadow=true;boss.add(crown);
+ const bossEyeMat=mat(0xffe8a3);
+ for(const side of [-1,1]){
+  const eye=new THREE.Mesh(new THREE.SphereGeometry(.18,12,10),bossEyeMat);
+  eye.position.set(side*.48,2.05,-1.25);boss.add(eye);
+ }
+ boss.position.set(0,0,-16);scene.add(boss);
+ document.getElementById('bossMessage').style.display='block';
+ document.getElementById('message').textContent='الزعيم ظهر! أطلق عليه كرات الطاقة!';
+ setTimeout(()=>{document.getElementById('bossMessage').style.display='none'},2200);
+}
+
+let score=0,shots=[],keys={},yaw=0,pitch=.12,started=false,mouseDown=false,health=100;
+const scoreEl=document.getElementById('score'),leftEl=document.getElementById('left'),healthEl=document.getElementById('health');
+const clock=new THREE.Clock();
+function updateHud(){scoreEl.textContent=score;leftEl.textContent=targets.filter(t=>t.alive).length;healthEl.textContent=health;if(bossSpawned&&bossHealth>0)document.getElementById('level').textContent='👑 صحة الزعيم: '+bossHealth+'/'+bossMaxHealth;}
+function shoot(){if(!started)return;let dir=new THREE.Vector3();camera.getWorldDirection(dir);let start=player.position.clone();start.y+=1.45;start.add(dir.clone().multiplyScalar(1.1));let orb=new THREE.Mesh(new THREE.SphereGeometry(.16,10,8),new THREE.MeshBasicMaterial({color:0x7cf5ff}));orb.position.copy(start);scene.add(orb);shots.push({mesh:orb,dir:dir.normalize(),life:2.2})}
+function cameraUpdate(){
+ let distance=7, horizontal=Math.cos(pitch)*distance;
+ let offset=new THREE.Vector3(Math.sin(yaw)*horizontal,3.1+Math.sin(pitch)*distance,Math.cos(yaw)*horizontal);
+ camera.position.copy(player.position).add(offset);
+ camera.lookAt(player.position.x,player.position.y+1.35,player.position.z);
+}
+function animate(){requestAnimationFrame(animate);let dt=Math.min(clock.getDelta(),.04);if(started){
+ let forward=new THREE.Vector3(-Math.sin(yaw),0,-Math.cos(yaw));let right=new THREE.Vector3(Math.cos(yaw),0,-Math.sin(yaw));let move=new THREE.Vector3();
+ if(keys.w)move.add(forward);if(keys.s)move.sub(forward);if(keys.d)move.add(right);if(keys.a)move.sub(right);
+ if(move.lengthSq()){move.normalize();let speed=keys.Shift?10:6;player.position.addScaledVector(move,speed*dt);player.rotation.y=Math.atan2(move.x,move.z)}
+ player.position.x=THREE.MathUtils.clamp(player.position.x,-21,21);player.position.z=THREE.MathUtils.clamp(player.position.z,-21,21);
+ if(onlineRoom&&socket.connected&&clock.elapsedTime-lastNetworkSend>.07){lastNetworkSend=clock.elapsedTime;socket.emit('player-move',{x:player.position.x,z:player.position.z,rotation:player.rotation.y});}
+ targets.forEach(t=>{
+  if(t.alive){
+   t.phase+=dt;
+   // The training monsters now wander, then chase the player when nearby.
+   const dx=player.position.x-t.g.position.x, dz=player.position.z-t.g.position.z;
+   const distance=Math.hypot(dx,dz);
+   if(distance<13 && distance>1.35){
+    t.g.position.x+=(dx/distance)*2.1*dt;
+    t.g.position.z+=(dz/distance)*2.1*dt;
+    t.g.rotation.y=Math.atan2(dx,dz);
+   } else if(distance>=13){
+    t.g.position.x+=Math.sin(t.phase*.8)*.65*dt;
+    t.g.position.z+=Math.cos(t.phase*.7)*.65*dt;
+   }
+   // الأعداء يهاجمون اللاعب إذا اقتربوا منه.
+   t.attackCooldown=Math.max(0,(t.attackCooldown||0)-dt);
+   if(distance<1.8 && t.attackCooldown<=0 && health>0){
+    health=Math.max(0,health-8);
+    t.attackCooldown=1;
+    updateHud();
+    document.getElementById('message').textContent=health>0?'⚡ أحد الأعداء ضربك! ابتعد عنه!':'انتهت اللعبة!';
+    if(health===0){
+     started=false;
+     const start=document.getElementById('start');
+     start.style.display='grid';
+     lobbyStatus.textContent='انتهت صحتك! جهّز نفسك وحاول مرة ثانية.';
+    }
+   }
+   t.g.position.y=Math.sin(t.phase*2)*.18;
+   t.g.rotation.y+=dt*.25;
+  }
+ });
+ for(let i=shots.length-1;i>=0;i--){let s=shots[i];s.mesh.position.addScaledVector(s.dir,22*dt);s.life-=dt;let hit=false;
+  for(let t of targets){if(t.alive&&s.mesh.position.distanceTo(new THREE.Vector3(t.g.position.x,1,t.g.position.z))<.9){if(onlineRoom)socket.emit('enemy-killed',targets.indexOf(t));else{t.alive=false;scene.remove(t.g);score+=100;if(targets.every(x=>!x.alive))spawnBoss();updateHud();}hit=true;break}}
+   if(!hit && boss && bossHealth>0 && s.mesh.position.distanceTo(new THREE.Vector3(boss.position.x,1.8,boss.position.z))<1.9){
+    if(onlineRoom)socket.emit('boss-hit');
+    else{bossHealth=Math.max(0,bossHealth-1);score+=10;updateHud();if(bossHealth===0){scene.remove(boss);boss=null;score+=1000;document.getElementById('level').textContent='🏆 انتصرت على الزعيم!';document.getElementById('message').textContent='🏆 فزت بالمعركة!';started=false;document.getElementById('start').style.display='grid';setLobbyStatus('🏆 هزمت جميع الأعداء والزعيم! يمكنك اللعب من جديد.');}}
+    hit=true;
+   }
+  if(hit||s.life<=0){scene.remove(s.mesh);shots.splice(i,1)}
+ }
+ if(boss && bossHealth>0){
+  const dx=player.position.x-boss.position.x;
+  const dz=player.position.z-boss.position.z;
+  const d=Math.hypot(dx,dz);
+  if(d>2.35){
+   boss.position.x+=(dx/d)*2.0*dt;
+   boss.position.z+=(dz/d)*2.0*dt;
+   boss.rotation.y=Math.atan2(dx,dz);
+  }
+  boss.position.y=Math.sin(clock.elapsedTime*2)*.12;
+  bossAttackCooldown=Math.max(0,bossAttackCooldown-dt);
+  if(d<3.0 && bossAttackCooldown<=0 && health>0){
+   health=Math.max(0,health-18);
+   bossAttackCooldown=1.0;
+   updateHud();
+   document.getElementById('message').textContent=health>0?'💥 الزعيم ضربك! اهرب منه!':'هزمك الزعيم! حاول مرة ثانية';
+   if(health===0){
+    started=false;
+    const start=document.getElementById('start');
+    start.style.display='grid';
+    lobbyStatus.textContent='الزعيم هزمك! جهّز نفسك وحاول مرة ثانية.';
+   }
+  }
+ }
+ cameraUpdate();
+}
+renderer.render(scene,camera)}
+animate();
+let activeRoomCode='';
+const roomCodeEl=document.getElementById('roomCode');
+const lobbyStatus=document.getElementById('lobbyStatus');
+const socket=io();
+let onlineRoom=false, myPlayerId=null, lastNetworkSend=0;
+let currentRoomState={defeated:[],bossActive:false,bossHealth:30};
+const remotePlayers=new Map();
+function setLobbyStatus(t){lobbyStatus.textContent=t;}
+function createRemotePlayer(id,name){
+ if(remotePlayers.has(id))return remotePlayers.get(id);
+ const g=new THREE.Group();
+ const c=new THREE.Mesh(new THREE.CapsuleGeometry(.48,.95,5,10),mat(0x24b7a5));c.position.y=1.05;c.castShadow=true;g.add(c);
+ const h=new THREE.Mesh(new THREE.SphereGeometry(.34,16,12),mat(0xf0c49a));h.position.y=1.88;g.add(h);
+ scene.add(g);remotePlayers.set(id,{g,name});return remotePlayers.get(id);
+}
+function applyRoomState(state){
+ if(!state)return;
+ currentRoomState=state;
+ if(Array.isArray(state.defeated))state.defeated.forEach(id=>{
+  const t=targets[id];if(t&&t.alive){t.alive=false;scene.remove(t.g);}
+ });
+ if(state.bossActive&&!bossSpawned)spawnBoss();
+ if(state.bossActive&&boss){bossHealth=state.bossHealth;updateHud();}
+ updateHud();
+}
+socket.on('connect',()=>setLobbyStatus('اتصلت بالسيرفر. أنشئ غرفة أو أدخل رمز صديقك.'));
+socket.on('disconnect',()=>setLobbyStatus('انقطع الاتصال بالسيرفر. حاول تحديث الصفحة.'));
+socket.on('connect_error',()=>setLobbyStatus('السيرفر غير متاح الآن. انتظر قليلاً ثم حاول مجدداً.'));
+socket.on('room-created',data=>{
+ onlineRoom=true;activeRoomCode=data.code;roomCodeEl.textContent=data.code;myPlayerId=socket.id;
+ setLobbyStatus('تم إنشاء الغرفة! أرسل الرمز '+data.code+' لأصدقائك.');applyRoomState(data.state);
+});
+socket.on('room-joined',data=>{
+ onlineRoom=true;activeRoomCode=data.code;roomCodeEl.textContent=data.code;myPlayerId=socket.id;
+ setLobbyStatus('دخلت الغرفة '+data.code+'. اللاعبين: '+data.players.length);applyRoomState(data.state);
+ data.players.forEach(p=>{if(p.id!==socket.id){const rp=createRemotePlayer(p.id,p.name);rp.g.position.set(p.x||0,0,p.z||0);rp.g.rotation.y=p.rotation||0;}});
+});
+socket.on('room-error',msg=>setLobbyStatus(msg));
+socket.on('player-joined',p=>{createRemotePlayer(p.id,p.name);setLobbyStatus('انضم '+p.name+' إلى الغرفة.');});
+socket.on('player-left',id=>{const p=remotePlayers.get(id);if(p){scene.remove(p.g);remotePlayers.delete(id);}});
+socket.on('player-moved',p=>{if(p.id===socket.id)return;const rp=createRemotePlayer(p.id,p.name);rp.g.position.set(p.x,0,p.z);rp.g.rotation.y=p.rotation||0;});
+socket.on('enemy-defeated',id=>{if(!currentRoomState.defeated.includes(id))currentRoomState.defeated.push(id);const t=targets[id];if(t&&t.alive){t.alive=false;scene.remove(t.g);score+=100;updateHud();}});
+socket.on('boss-start',()=>{currentRoomState.bossActive=true;currentRoomState.bossHealth=30;if(!bossSpawned)spawnBoss();});
+socket.on('boss-health',hp=>{bossHealth=hp;currentRoomState.bossHealth=hp;updateHud();});
+socket.on('boss-defeated',()=>{
+ currentRoomState.bossHealth=0;
+ if(boss){scene.remove(boss);boss=null;}bossHealth=0;score+=1000;updateHud();
+ document.getElementById('level').textContent='🏆 انتصرت على الزعيم!';document.getElementById('message').textContent='🏆 فزتم بالمعركة!';started=false;
+ document.getElementById('start').style.display='grid';setLobbyStatus('🏆 هزمت المجموعة الزعيم! يمكنكم اللعب من جديد.');
+});
+function makeRoomCode(){return String(Math.floor(100000+Math.random()*900000));}
+document.getElementById('createRoom').addEventListener('click',()=>{
+ const name=document.getElementById('playerName').value.trim().slice(0,16)||'لاعب الأساطير';
+ if(!socket.connected){setLobbyStatus('انتظر اتصال السيرفر أولاً.');return;}
+ socket.emit('create-room',{name});
+});
+document.getElementById('copyRoom').addEventListener('click',async()=>{
+ if(!activeRoomCode){lobbyStatus.textContent='أنشئ غرفة أولاً للحصول على رمز.';return;}
+ try{await navigator.clipboard.writeText(activeRoomCode);lobbyStatus.textContent='تم نسخ رمز الغرفة: '+activeRoomCode;}
+ catch(e){lobbyStatus.textContent='رمز الغرفة: '+activeRoomCode+' (انسخه يدوياً)';}
+});
+document.getElementById('joinRoom').addEventListener('click',()=>{
+ const code=document.getElementById('joinCode').value.trim();
+ const name=document.getElementById('playerName').value.trim().slice(0,16)||'لاعب الأساطير';
+ if(!/^\d{6}$/.test(code)){setLobbyStatus('اكتب رمزاً مكوّناً من 6 أرقام.');return;}
+ if(!socket.connected){setLobbyStatus('انتظر اتصال السيرفر أولاً.');return;}
+ socket.emit('join-room',{code,name});
+});
+document.getElementById('play').onclick=async()=>{
+  // Request fullscreen and landscape orientation from the user's tap.
+  try {
+    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+      await document.documentElement.requestFullscreen();
+    }
+  } catch(e) {}
+  try {
+    if (screen.orientation && screen.orientation.lock) {
+      await screen.orientation.lock('landscape');
+    }
+  } catch(e) {
+    document.getElementById('message').textContent='دوّر جهازك للوضع الأفقي إذا لم تنقلب الشاشة تلقائياً';
+  }
+  document.getElementById('start').style.display='none';
+  const chosenName=document.getElementById('playerName').value.trim()||'لاعب الأساطير';
+  document.getElementById('level').textContent=onlineRoom?'الغرفة: '+activeRoomCode+' · '+chosenName:'اللاعب: '+chosenName;
+  health=100;score=0;bossHealth=0;bossSpawned=false;if(onlineRoom)socket.emit('reset-round');bossAttackCooldown=0;if(boss){scene.remove(boss);boss=null;}targets.forEach(t=>{t.alive=true;t.attackCooldown=0;scene.add(t.g);});updateHud();
+  started=true;
+  canvas.requestPointerLock?.();
+
+  cameraUpdate();
+};
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(e.key==='Shift')keys.Shift=true});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;if(e.key==='Shift')keys.Shift=false});
+document.addEventListener('pointerlockchange',()=>{});
+let draggingCamera=false,lastX=0,lastY=0;
+document.addEventListener('mousemove',e=>{
+ if(document.pointerLockElement===canvas){
+  yaw-=e.movementX*.0025;
+  pitch=THREE.MathUtils.clamp(pitch-e.movementY*.002,-.35,.8);
+ } else if(draggingCamera){
+  yaw-=(e.clientX-lastX)*.006;
+  pitch=THREE.MathUtils.clamp(pitch-(e.clientY-lastY)*.004,-.35,.8);
+  lastX=e.clientX;lastY=e.clientY;
+ }
+});
+canvas.addEventListener('mousedown',e=>{
+ if(started && e.button===2){draggingCamera=true;lastX=e.clientX;lastY=e.clientY;}
+});
+addEventListener('mouseup',()=>draggingCamera=false);
+let cameraTouchId=null;
+canvas.addEventListener('touchstart',e=>{
+ if(!started || cameraTouchId!==null)return;
+ const t=e.changedTouches[0];
+ cameraTouchId=t.identifier;
+ lastX=t.clientX;lastY=t.clientY;
+},{passive:true});
+canvas.addEventListener('touchmove',e=>{
+ if(!started || cameraTouchId===null)return;
+ const t=Array.from(e.changedTouches).find(t=>t.identifier===cameraTouchId);
+ if(!t)return;
+ e.preventDefault();
+ const dx=t.clientX-lastX,dy=t.clientY-lastY;
+ // اسحب يميناً ويساراً لتدوير الكاميرا، وأعلى وأسفل لتغيير زاوية النظر.
+ yaw-=dx*.006;
+ pitch=THREE.MathUtils.clamp(pitch-dy*.004,-.35,.8);
+ lastX=t.clientX;lastY=t.clientY;
+},{passive:false});
+const endCameraTouch=e=>{
+ if(cameraTouchId===null)return;
+ if(Array.from(e.changedTouches).some(t=>t.identifier===cameraTouchId))cameraTouchId=null;
+};
+canvas.addEventListener('touchend',endCameraTouch,{passive:true});
+canvas.addEventListener('touchcancel',endCameraTouch,{passive:true});
+canvas.addEventListener('click',()=>{if(started){if(document.pointerLockElement!==canvas)canvas.requestPointerLock?.();else shoot()}});
+addEventListener('contextmenu',e=>e.preventDefault());
+document.getElementById('shoot').addEventListener('touchstart',e=>{e.preventDefault();shoot()});
+document.querySelectorAll('[data-key]').forEach(b=>{let k=b.dataset.key;b.addEventListener('touchstart',e=>{e.preventDefault();keys[k]=true});b.addEventListener('touchend',e=>{e.preventDefault();keys[k]=false})});
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+})();
+</script>
+</body></html>
